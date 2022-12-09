@@ -8,7 +8,7 @@ on:
       - images/.trigger
       - images/dynamodb-local/**
     branches:
-      - develop-test
+      - main
 jobs:
   dynamodb-local:
     name: dynamodb-local
