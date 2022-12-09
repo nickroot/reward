@@ -1,0 +1,44 @@
+{{- /* @formatter:off */ -}}
+
+version: "3.5"
+services:
+  dynamodb-local:
+    hostname: "{{ .reward_env_name }}-dynamodb-local"
+    image: {{ default "docker.io/rewardenv" .reward_docker_image_repo }}/dynamodb:{{ default "latest" .dynamodb-local_version }}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.{{ .reward_env_name }}-dynamodb-local.tls=true
+      - traefik.http.routers.{{ .reward_env_name }}-dynamodb-local.rule=Host(`dynamodb-local.{{ .traefik_domain }}`)
+      - traefik.http.services.{{ .reward_env_name }}-dynamodb-local.loadbalancer.server.port=8000
+      - traefik.docker.network={{ .reward_env_name }}_default
+      - dev.reward.container.name=dynamodb-local
+      - dev.reward.environment.name={{ .reward_env_name }}
+    volumes:
+      - dynamodb-local:/data
+{{- if isEnabled ( default false .dynamodb-local_expose ) }}
+    ports:
+      - {{ default 8000 .dynamodb-local_expose_target }}:8000
+{{- end }}
+{{ if isEnabled ( default true .reward_dynamodb-admin ) }}
+  dynamodb-admin:
+    container_name: "{{ .reward_env_name }}-dynamodb-admin"
+    image: { { default "docker.io/rewardenv" .reward_docker_image_repo } }/dynamodb-admin:{{ default "1.2" .dynamodb-local_version }}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.{{ .reward_env_name }}-dynamodb-admin.tls=true
+      - traefik.http.routers.{{ .reward_env_name }}-dynamodb-admin.rule=Host(`dynamodb-admin.{{ .traefik_domain }}`)
+      - traefik.http.services.{{ .reward_env_name }}-dynamodb-admin.loadbalancer.server.port=8001
+      - traefik.docker.network={{ .reward_env_name }}_default
+      - dev.reward.container.name=opensearch-dashboards
+      - dev.reward.environment.name={{ .reward_env_name }}
+    environment:
+      - DYNAMO_ENDPOINT: "http://dynamodb-local:8000"
+      - AWS_REGION: "us-east-1"
+      - AWS_ACCESS_KEY_ID: local
+      - AWS_SECRET_ACCESS_KEY: local
+    depends_on:
+      - dynamodb-local
+{{ end }}
+
+volumes:
+  dynamodb-local:
